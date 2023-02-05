@@ -22,5 +22,9 @@
     "hardhat-gas-reporter": "^1.0.8",
     "solidity-coverage": "^0.8.0",
     "typechain": "^8.1.0"
+  },
+  "scripts": {
+    "test": "hardhat test",
+    "live": "nodemon --exec yarn test -e sol,js,ts"
   }
 }

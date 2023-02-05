@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Main is Ownable, ERC20 {
     using SafeERC20 for IERC20;
     IERC20 public token;
-    uint public fee = 1000; // 1000 = 10%
+    uint public fee; // 1000 = 10%
     uint public totalFeeCollected;
     address public feeAddress;
     uint public balance;
@@ -23,10 +23,10 @@ contract Main is Ownable, ERC20 {
         uint256 datetime;
     }
 
-    mapping(address => DepositInfo[]) public deposits;
+    mapping(address => DepositInfo) public deposits;
 
-    event Deposit(address user, address shares);
-    event Withdraw(address user, address shares);
+    event Deposit(address user, uint shares);
+    event Withdraw(address user, uint shares);
 
     error InvalidTokenAddress();
     error InvalidDepositAmount();
@@ -34,12 +34,13 @@ contract Main is Ownable, ERC20 {
     error InvalidFeeAmount();
     error InvalidFeeAddress();
 
-    constructor(address _token, uint _multiplier) ERC20("RCP", "Receipt") {
+    constructor(address _token, uint _fee) ERC20("RCP", "Receipt") {
         if (_token == address(0))
             revert InvalidTokenAddress();
         token = IERC20(_token);
         token.totalSupply();
-        multiplier = _multiplier;
+        fee = _fee;
+        feeAddress = msg.sender;
     }
 
     function changeFee(uint256 _fee) external onlyOwner {
@@ -58,7 +59,7 @@ contract Main is Ownable, ERC20 {
         if (value == 0)
             revert InvalidDepositAmount();
 
-        token.safeTransfer(address(this), value);
+        token.safeTransferFrom(msg.sender, address(this), value);
 
         if (fee > 0) {
             uint256 feeAmount = (value * fee) / 10000;
@@ -80,12 +81,12 @@ contract Main is Ownable, ERC20 {
 
         balance += value;
 
-        DepositInfo storage deposit = deposits[msg.sender];
+        DepositInfo storage depositInfo = deposits[msg.sender];
 
-        deposit.user = msg.sender;
-        deposit.shares += shares;
-        deposit.deposited += value;
-        deposit.datetime = block.timestamp;
+        depositInfo.user = msg.sender;
+        depositInfo.shares += shares;
+        depositInfo.deposited += value;
+        depositInfo.datetime = block.timestamp;
 
         emit Deposit(msg.sender, shares);
 
@@ -101,10 +102,12 @@ contract Main is Ownable, ERC20 {
         balance -= value;
         _burn(msg.sender, shares);
 
-        DepositInfo storage deposit = deposits[msg.sender];
+        DepositInfo storage depositInfo = deposits[msg.sender];
 
-        deposit.shares -= shares;
-        deposit.deposited -= value;
+        depositInfo.shares -= shares;
+        depositInfo.deposited -= value;
+
+        token.safeTransfer(msg.sender, value);
 
         emit Withdraw(msg.sender, shares);
 
