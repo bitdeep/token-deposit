@@ -30,7 +30,7 @@ describe("Main", function () {
         it("variables should match", async function () {
             const {token, main, fee, DEV, FEE_USER, balance} = await loadFixture(deploy);
             expect(await main.token()).to.equal(token.address);
-            expect(await main.fee()).to.equal(fee);
+            expect(await main.depositFee()).to.equal(fee);
             expect(await token.balanceOf(DEV.address)).to.equal(balance);
             expect(await main.feeAddress()).to.equal(FEE_USER.address);
         });

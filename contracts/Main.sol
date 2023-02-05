@@ -11,7 +11,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Main is Ownable, ERC20 {
     using SafeERC20 for IERC20;
     IERC20 public token;
-    uint public fee; // 1000 = 10%
+    uint public depositFee; // 1000 = 10%
+    uint public withdrawFee; // 1000 = 10%
     uint public totalFeeCollected;
     address public feeAddress;
     uint public balance;
@@ -39,14 +40,19 @@ contract Main is Ownable, ERC20 {
             revert InvalidTokenAddress();
         token = IERC20(_token);
         token.totalSupply();
-        fee = _fee;
+        depositFee = _fee;
         feeAddress = msg.sender;
     }
 
-    function changeFee(uint256 _fee) external onlyOwner {
+    function changeDepositFee(uint256 _fee) external onlyOwner {
         if (_fee > 10000)
             revert InvalidFeeAmount();
-        fee = _fee;
+        depositFee = _fee;
+    }
+    function changeWithdrawFee(uint256 _fee) external onlyOwner {
+        if (_fee > 10000)
+            revert InvalidFeeAmount();
+        withdrawFee = _fee;
     }
 
     function changeFeeAddress(address payable _address) external onlyOwner {
@@ -61,10 +67,10 @@ contract Main is Ownable, ERC20 {
 
         token.safeTransferFrom(msg.sender, address(this), value);
 
-        if (fee > 0) {
-            uint256 feeAmount = (value * fee) / 10000;
+        if (depositFee > 0) {
+            uint256 feeAmount = (value * depositFee) / 10000;
             token.safeTransfer(feeAddress, feeAmount);
-            value = value - feeAmount;
+            value -= feeAmount;
             totalFeeCollected += feeAmount;
         }
 
@@ -106,6 +112,13 @@ contract Main is Ownable, ERC20 {
 
         depositInfo.shares -= shares;
         depositInfo.deposited -= value;
+
+        if (withdrawFee > 0) {
+            uint256 feeAmount = (value * withdrawFee) / 10000;
+            token.safeTransfer(feeAddress, feeAmount);
+            value -= feeAmount;
+            totalFeeCollected += feeAmount;
+        }
 
         token.safeTransfer(msg.sender, value);
 
